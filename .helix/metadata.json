@@ -1,0 +1,22 @@
+[
+  {
+    "instance_id": "bitsandbytes_linear4bit_serialization",
+    "task_title": "Fix Linear4bit state_dict loading asymmetry via pre-hook",
+    "problem_statement": "bitsandbytes.nn.Linear4bit overrides _save_to_state_dict to write QuantState keys but does not provide a matching mechanism to consume them during load_state_dict. This causes strict loading to fail with a RuntimeError due to unexpected keys.",
+    "hints": "",
+    "repo": "bitsandbytes",
+    "repo_path_or_url": "",
+    "FAIL_TO_PASS": "tests/test_serialization_f2p.py",
+    "PASS_TO_PASS": "tests/test_diagnostics.py",
+    "language": "python",
+    "docker_file": ".helix/Dockerfile.helix",
+    "run_script": ".helix/run-tests-eval.sh",
+    "task_type": "code_fix",
+    "task_category": "bug_fix",
+    "repo_category": "machine_learning",
+    "version": "1.0",
+    "container_mem": "4g",
+    "container_memswap": "4g",
+    "container_network_needed": "false"
+  }
+]
