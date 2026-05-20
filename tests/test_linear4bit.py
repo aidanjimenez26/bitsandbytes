@@ -9,6 +9,7 @@ from tempfile import TemporaryDirectory
 
 import pytest
 import torch
+from packaging.version import Version
 
 import bitsandbytes as bnb
 from tests.helpers import (
@@ -27,6 +28,8 @@ storage = {
     "bfloat16": torch.bfloat16,
     "float32": torch.float32,
 }
+
+TORCH_VERSION = Version(torch.__version__)
 
 
 @pytest.mark.parametrize("device", get_available_devices())
@@ -356,19 +359,19 @@ def test_params4bit_real_serialization(device, quant_type, blocksize, compress_s
 @pytest.mark.parametrize("fullgraph", TRUE_FALSE, ids=id_formatter("fullgraph"))
 @pytest.mark.parametrize("mode", ["default", "reduce-overhead"], ids=id_formatter("mode"))
 @pytest.mark.skipif(
-    torch.__version__ < (2, 10) and sys.version_info >= (3, 14), reason="Not supported in Python 3.14 until torch 2.10"
+    TORCH_VERSION < Version("2.10") and sys.version_info >= (3, 14), reason="Not supported in Python 3.14 until torch 2.10"
 )
 def test_linear4bit_torch_compile(device, quant_type, compute_dtype, compress_statistics, bias, fullgraph, mode):
     if device == "hpu" and not is_supported_on_hpu(quant_type):
         pytest.skip("This configuration is not supported on HPU.")
 
-    if fullgraph and torch.__version__ < (2, 8, 0, "dev"):
+    if fullgraph and TORCH_VERSION < Version("2.8"):
         pytest.skip("fullgraph mode requires torch 2.8 or higher")
 
     if platform.system() == "Windows":
         if device == "cuda":
             pytest.skip("Triton is not officially supported on Windows")
-        if device == "cpu" and torch.__version__ < (2, 7):
+        if device == "cpu" and TORCH_VERSION < Version("2.7"):
             # torch.compile inductor on Windows CPU has include path bugs fixed in torch 2.7
             # https://github.com/pytorch/pytorch/pull/148271
             pytest.skip("torch.compile inductor on Windows CPU requires torch >= 2.7")
@@ -379,7 +382,7 @@ def test_linear4bit_torch_compile(device, quant_type, compute_dtype, compress_st
         and device == "cpu"
         and platform.machine() == "aarch64"
         and platform.system() == "Linux"
-        and ((2, 7) > torch.__version__ >= (2, 6))
+        and (Version("2.6") <= TORCH_VERSION < Version("2.7"))
     ):
         pytest.xfail("Regression in torch==2.6.0 on Linux aarch64 CPU")
 
@@ -390,7 +393,7 @@ def test_linear4bit_torch_compile(device, quant_type, compute_dtype, compress_st
         and bias
         and device == "cpu"
         and platform.system() == "Darwin"
-        and torch.__version__ < (2, 6)
+        and TORCH_VERSION < Version("2.6")
     ):
         pytest.xfail("precision diverges on macos cpu")
 
@@ -452,9 +455,9 @@ def test_linear4bit_torch_compile(device, quant_type, compute_dtype, compress_st
 @pytest.mark.parametrize("device", get_available_devices())
 @pytest.mark.parametrize("quant_type", ["nf4", "fp4"])
 @pytest.mark.parametrize("compress_statistics", TRUE_FALSE, ids=id_formatter("compress_statistics"))
-@pytest.mark.skipif(torch.__version__ < (2, 8, 0, "dev"), reason="fullgraph requires torch 2.8+")
+@pytest.mark.skipif(TORCH_VERSION < Version("2.8"), reason="fullgraph requires torch 2.8+")
 @pytest.mark.skipif(
-    torch.__version__ < (2, 10) and sys.version_info >= (3, 14), reason="Not supported in Python 3.14 until torch 2.10"
+    TORCH_VERSION < Version("2.10") and sys.version_info >= (3, 14), reason="Not supported in Python 3.14 until torch 2.10"
 )
 def test_linear4bit_torch_compile_activation_checkpointing(device, quant_type, compress_statistics):
     """Regression test for #1904: __getattr__ on Params4bit causes graph breaks under torch.compile.
@@ -472,7 +475,7 @@ def test_linear4bit_torch_compile_activation_checkpointing(device, quant_type, c
         device == "cuda"
         and torch.cuda.is_available()
         and torch.cuda.get_device_capability() < (8, 0)
-        and torch.__version__ >= (2, 13, 0, "dev")
+        and TORCH_VERSION >= Version("2.13")
     ):
         pytest.xfail("no compiled frames error on SM75")
     dim = 256
